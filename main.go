@@ -1,79 +1,55 @@
 package main
 
 import (
-	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
 )
 
-// Connection string for PostgreSQL
-const (
-	host     = "localhost"
-	port     = 5433
-	user     = "postgres"
-	password = "password"
-	dbname   = "go_test"
-)
+// Kullanıcıları JSON olarak döndüren API endpoint
+func getUsersHandler(w http.ResponseWriter, r *http.Request) {
+	users, err := getUsers() // users.go'dan getUsers fonksiyonunu çağırıyoruz
+	if err != nil {
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
+		return
+	}
 
-/* INSERT INTO users (username, email, created_at) VALUES
-('john_doe', 'john@example.com', NOW()),
-('jane_doe', 'jane@example.com', NOW()),
-('mike_smith', 'mike@example.com', NOW()),
-('alice_williams', 'alice@example.com', NOW()),
-('bob_johnson', 'bob@example.com', NOW()),
-('charlie_brown', 'charlie@example.com', NOW()),
-('david_jones', 'david@example.com', NOW()),
-('emily_davis', 'emily@example.com', NOW()),
-('lucas_martin', 'lucas@example.com', NOW()),
-('olivia_lee', 'olivia@example.com', NOW()); */
+	// JSON formatında kullanıcıları yanıt olarak gönder
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(users); err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
+}
+
+// Kullanıcı ekleme API endpoint
+func addUserHandler(w http.ResponseWriter, r *http.Request) {
+	var user User
+	// POST isteğinden gelen JSON verisini okuma
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	// Yeni kullanıcıyı veritabanına ekleme
+	newUser, err := addUser(user.Username, user.Email) // users.go'dan addUser fonksiyonunu çağırıyoruz
+	if err != nil {
+		http.Error(w, "Failed to add user", http.StatusInternalServerError)
+		return
+	}
+
+	// JSON formatında eklenen kullanıcıyı yanıt olarak gönder
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(newUser); err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
+}
 
 func main() {
-	// Create a new router
-	r := gin.Default()
+	http.HandleFunc("/users", getUsersHandler)    // Kullanıcıları al
+	http.HandleFunc("/users/add", addUserHandler) // Kullanıcı ekle
 
-	// Connect to PostgreSQL
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", psqlInfo)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-	defer db.Close()
-
-	// Test the connection
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("Unable to ping the database: %v\n", err)
-	}
-	log.Println("Successfully connected to the database")
-
-	// Define a simple route
-	r.GET("/users", func(c *gin.Context) {
-		var users []string
-		rows, err := db.Query("SELECT username FROM users")
-		if err != nil {
-			log.Fatalf("Unable to execute query: %v\n", err)
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var username string
-			err = rows.Scan(&username)
-			if err != nil {
-				log.Fatalf("Unable to scan row: %v\n", err)
-			}
-			users = append(users, username)
-		}
-
-		c.JSON(http.StatusOK, gin.H{"users": users})
-	})
-
-	// Run the server
-	r.Run(":8080")
+	// Sunucuyu başlat
+	fmt.Println("Server running at http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
