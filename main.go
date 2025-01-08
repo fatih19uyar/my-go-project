@@ -16,8 +16,20 @@ const (
 	port     = 5433
 	user     = "postgres"
 	password = "password"
-	dbname   = "omerfatihuyar"
+	dbname   = "go_test"
 )
+
+/* INSERT INTO users (username, email, created_at) VALUES
+('john_doe', 'john@example.com', NOW()),
+('jane_doe', 'jane@example.com', NOW()),
+('mike_smith', 'mike@example.com', NOW()),
+('alice_williams', 'alice@example.com', NOW()),
+('bob_johnson', 'bob@example.com', NOW()),
+('charlie_brown', 'charlie@example.com', NOW()),
+('david_jones', 'david@example.com', NOW()),
+('emily_davis', 'emily@example.com', NOW()),
+('lucas_martin', 'lucas@example.com', NOW()),
+('olivia_lee', 'olivia@example.com', NOW()); */
 
 func main() {
 	// Create a new router
